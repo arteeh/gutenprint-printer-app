@@ -57,7 +57,6 @@ gutenprint_autoadd(const char *device_info,	// I - Device name (unused)
 {
   pr_printer_app_global_data_t *global_data =
     (pr_printer_app_global_data_t *)data;
-  const char	*ret = NULL;		// Return value
 
 
   (void)device_info;
@@ -66,26 +65,9 @@ gutenprint_autoadd(const char *device_info,	// I - Device name (unused)
   if (device_id == NULL || global_data == NULL)
     return (NULL);
 
-  // Find the best-matching PPD file to expicitly support our printer model
-  if (!((ret = prBestMatchingPPD(device_id, global_data)) != 0 ||
-	// No dedicated support for this model, look at the COMMAND
-	// SET (CMD) key in the device ID for the list of printer
-	// languages and select a generic driver if we find a
-	// supported language
-	(prSupportsPCL5c(device_id) &&
-	 (ret = prBestMatchingPPD("MFG:Generic;MDL:PCL Color Laser;",
-				     global_data)) != 0) ||
-	(prSupportsPCLXL(device_id) &&
-	 (ret = prBestMatchingPPD("MFG:Generic;MDL:PCL 6/PCL XL Printer;",
-				   global_data)) != 0) ||
-	(prSupportsPCL5(device_id) &&
-	 (ret = prBestMatchingPPD("MFG:Generic;MDL:PCL 5e Printer;",
-				     global_data)) != 0)))
-    // Printer does not support our PDLs, it is not supported by this
-    // Printer Application
-    ret = NULL;
-
-  return (ret);
+  // Select only a PPD matching this printer model. Gutenprint does not
+  // ship generic PCL drivers, so command-set support is not a fallback.
+  return (prBestMatchingPPD(device_id, global_data));
 }
 
 

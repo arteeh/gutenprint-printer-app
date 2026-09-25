@@ -426,3 +426,8 @@ The HP PCL Printer Application is Copyright © 2019-2020 by Michael R Sweet.
 This software is licensed under the Apache License Version 2.0 with an exception
 to allow linking against GPL2/LGPL2 software (like older versions of CUPS).  See
 the files "LICENSE" and "NOTICE" for more information.
+### OCI license evidence
+
+The application source license is not a complete license inventory for the
+composed printer image. See [OCI license evidence](docs/oci-licenses.md) for
+source-notice review, SPDX inventory reporting, and image/index metadata checks.

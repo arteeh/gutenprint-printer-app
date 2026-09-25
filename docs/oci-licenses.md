@@ -24,9 +24,9 @@ complete SPDX JSON, and a manifest of staged license/notice files. Review:
 | --- | --- |
 | Application | This revision's `LICENSE`, `NOTICE`, and source headers |
 | Gutenprint | Pinned source `COPYING`, `debian/copyright`, and headers for installed drivers, filters, libraries, utilities and data |
-| PAPPL | Pinned source `LICENSE`, `NOTICE` where present, and headers, including local patches |
-| CUPS | Pinned source license/notice files and headers for installed libraries and backends, including local patches |
-| FSDK and other runtime dependencies | Every staged component's pinned source notices and SPDX package records, including libcupsfilters, libppd, pappl-retrofit and any interpreter/runtime libraries |
+| PAPPL, pappl-retrofit | Pinned source `LICENSE`, `NOTICE` where present, and headers, including the patch queues in fsdk-containers `patches/printing/` |
+| CUPS, cups-filters, libcupsfilters, libppd, Ghostscript | Pinned FSDK source license/notice files and headers for installed libraries, filters and backends, including fsdk-containers' `patches/freedesktop-sdk/` printing patch |
+| FSDK and other runtime dependencies | Every staged component's pinned source notices and SPDX package records, including avahi, D-Bus and any interpreter/runtime libraries |
 
 The Gutenprint finding in [issue #22](https://github.com/projectbluefin/gutenprint-printer-app/issues/22)
 uses `debian/copyright` at commit `5131fd401a6f4221a623125dd8b710b365ad83d3`.
@@ -41,11 +41,12 @@ Distinguish build-only dependencies from the contents of the final layer.
 
 ## Capture and compare
 
-At the time this procedure was added, the FSDK graph and `just sbom` command
-were proposed in [PR #27](https://github.com/projectbluefin/gutenprint-printer-app/pull/27),
-not present on `testing`. After integration, generate the complete SPDX from
-the same pinned graph used to build each architecture (the proposal uses
-`buildstream-sbom --deps all`). Archive the original outputs. A filesystem
+`just sbom` generates the complete SPDX with `buildstream-sbom --deps all`
+from the same pinned graph that builds each architecture, including the
+fsdk-containers printing base. `registry-actions.yml` attaches that SPDX to the
+release and signs it. The image config label (`elements/oci/gutenprint-printer-app.bst`)
+and the index annotation (`registry-actions.yml`) both currently declare
+`Apache-2.0 AND GPL-2.0-or-later`. Archive the original outputs. A filesystem
 scanner alone can miss source-built software without package-manager records.
 Check that Gutenprint, PAPPL, CUPS, the app and the full runtime closure appear;
 compare their records with the source notices and actual staged files above.

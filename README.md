@@ -461,3 +461,9 @@ The HP PCL Printer Application is Copyright © 2019-2020 by Michael R Sweet.
 This software is licensed under the Apache License Version 2.0 with an exception
 to allow linking against GPL2/LGPL2 software (like older versions of CUPS).  See
 the files "LICENSE" and "NOTICE" for more information.
+
+## Dependency update automation
+
+See [dependency proposal ownership](docs/dependency-updates.md) for the organization
+Renovate scope, existing source updater exclusions, and the prerequisites for
+verified application/driver update proposals against `testing`.

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "baseBranchPatterns": ["testing"],
+  "enabledManagers": ["github-actions"],
+  "ignorePaths": ["rockcraft.yaml", "snap/**"],
+  "ignoreUnstable": true,
+  "prCreation": "immediate",
+  "packageRules": [
+    {
+      "description": "Keep all proposals reviewable, including inherited pin and digest updates",
+      "matchPackageNames": ["*"],
+      "automerge": false
+    }
+  ]
+}

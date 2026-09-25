@@ -5,11 +5,12 @@ its Gutenprint PPD generator installed and `PAPPL_MAX_VENDOR >= 256`:
 python3 tests/device-selection.py /path/to/gutenprint-printer-app
 ```
 
-For an OCI image built from the current checkout, pass the container command:
+For an OCI image built from the current checkout, pass the container command
+(`just verify` runs this against the image it builds):
 
 ```sh
 python3 tests/device-selection.py -- podman run --rm \
-  --entrypoint /usr/bin/gutenprint-printer-app IMAGE
+  --entrypoint /usr/bin/gutenprint-printer-app ghcr.io/projectbluefin/gutenprint-printer-app:build
 ```
 
 The test calls the real `drivers -o device-id=...` auto-add path. Unknown PCL

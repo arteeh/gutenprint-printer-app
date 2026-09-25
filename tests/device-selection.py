@@ -9,7 +9,9 @@ import subprocess
 def drivers(command, device_id=None):
     args = [*command, "drivers"]
     if device_id is not None:
-        args += ["-o", f"device-id={device_id}"]
+        # PAPPL parses -o values like cupsParseOptions: quote the device ID
+        # or its first space silently truncates it.
+        args += ["-o", f"device-id='{device_id}'"]
     result = subprocess.run(args, check=True, text=True, capture_output=True, timeout=120)
     rows = [shlex.split(line) for line in result.stdout.splitlines() if line.strip()]
     if any(len(row) != 3 for row in rows):
@@ -41,8 +43,8 @@ def main():
     # IDs from Gutenprint's escp2.xml and canon.xml, not generic PCL fixtures.
     for device_id, model, driver_prefix in (
         ("MFG:EPSON;MDL:Stylus Photo R300;DES:EPSON Stylus Photo R300;",
-         "Epson Stylus Photo R300", "epson-stylus-photo-r300--"),
-        ("MFG:Canon;MDL:iP4000;CMD:BJL,BJRaster3,BSCCe;", "Canon PIXMA iP4000", "canon-ip4000--"),
+         "Epson Stylus Photo R300", "epson--stylus-photo-r-300--"),
+        ("MFG:Canon;MDL:iP4000;CMD:BJL,BJRaster3,BSCCe;", "Canon PIXMA iP4000", "canon--ip-4000--"),
     ):
         selected = drivers(command, device_id)
         if len(selected) != 1:

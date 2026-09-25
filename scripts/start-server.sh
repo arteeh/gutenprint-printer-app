@@ -1,18 +1,14 @@
 #!/bin/sh
 set -eux
 
-# Precheck: Ensure PORT is a number or undefined
-if [ -n "${PORT:-}" ]; then
-    if ! echo "$PORT" | grep -Eq '^[0-9]+$'; then
-        echo "Error: PORT must be a valid number" >&2
-        exit 1
-    fi
-fi
+# Keep every mutable application resource in the instance's persistent volume.
+# shellcheck source=scripts/prepare-state.sh
+. "$(dirname "$0")/prepare-state.sh"
 
 # Wait for avahi-daemon to initialize
 while true; do
     if [ -f "/var/run/avahi-daemon/pid" ] || [ -f "/run/avahi-daemon/pid" ]; then
-        echo "avahi-daemon is active. Starting ps-printer-app..."
+        echo "avahi-daemon is active. Starting gutenprint-printer-app..."
         break
     fi
 
@@ -20,5 +16,7 @@ while true; do
     sleep 1
 done
 
-# Start the gutenprint-printer-app server
-gutenprint-printer-app -o log-file="/gutenprint-printer-app.log" ${PORT:+-o server-port="$PORT"} server
+# An explicit port prevents PAPPL from selecting another instance's port.
+# Saved system/printer names take precedence after the first startup.
+exec gutenprint-printer-app -o log-file=- -o server-port="$PORT" \
+    -o system-name="${SYSTEM_NAME:-Gutenprint Printer Application ($PORT)}" server

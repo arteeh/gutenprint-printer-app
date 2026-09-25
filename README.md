@@ -213,6 +213,9 @@ configuring SNMP network printer discovery.
 
 ## THE ROCK (OCI CONTAINER IMAGE)
 
+For rootless operation, persistent configuration, and assigning LAN/USB printers
+to a single application, see [OCI isolation](docs/oci-isolation.md).
+
 ### Install from Docker Hub
 #### Prerequisites
 
@@ -243,8 +246,6 @@ To run the container after pulling the image from the GitHub Container Registry,
       --network host \
       -e PORT=<port> \
       -v gutenprint-printer-app:/var/lib/gutenprint-printer-app \
-      -v /dev/bus/usb:/dev/bus/usb:ro \
-      --device-cgroup-rule='c 189:* rmw' \
       ghcr.io/openprinting/gutenprint-printer-app:latest
 ```
 
@@ -266,18 +267,14 @@ To run the container after pulling the image from Docker Hub, use:
       --network host \
       -e PORT=<port> \
       -v gutenprint-printer-app:/var/lib/gutenprint-printer-app \
-      -v /dev/bus/usb:/dev/bus/usb:ro \
-      --device-cgroup-rule='c 189:* rmw' \
       openprinting/gutenprint-printer-app:latest
 ```
 
-- `PORT` is an optional environment variable used to start the printer-app on a specified port. If not provided, it will start on the default port 8000 or, if port 8000 is busy, on 8001 and so on.
+- `PORT` is an optional environment variable used to start the printer-app on a specified port. It must be between 1024 and 65535 and defaults to 8000. Assign a different port to each application; the launcher does not request automatic port selection.
 - **The container must be started in `--network host` mode** to allow the Printer-Application instance inside the container to access and discover printers available in the local network where the host system is in.
 - Alternatively using the internal network of the Docker instance (`-p <port>:8000` instead of `--network host -e PORT=<port>`) only gives access to local printers running on the host system itself.
 - `-v gutenprint-printer-app:/var/lib/gutenprint-printer-app` maps a volume for persistent storage.
-- The following volume and device settings are crucial for USB printer access:
-  - `-v /dev/bus/usb:/dev/bus/usb:ro` mounts the host's USB device directory read-only inside the container for USB printer access.
-  - `--device-cgroup-rule='c 189:* rmw'` allows the container to read, write, and mknod to USB devices.
+- USB access is opt-in. Pass only the assigned printer device node; see [rootless USB ownership and permissions](docs/oci-isolation.md#rootless-usb-instance).
 
 ### Setting Up and Running gutenprint-printer-app locally
 
@@ -328,11 +325,9 @@ Create a Docker volume:
       --network host \
       -e PORT=<port> \
       -v gutenprint-printer-app:/var/lib/gutenprint-printer-app \
-      -v /dev/bus/usb:/dev/bus/usb:ro \
-      --device-cgroup-rule='c 189:* rmw' \
       gutenprint-printer-app:latest
 ```
-- `PORT` is an optional environment variable used to start the printer-app on a specified port. If not provided, it will start on the default port 8000 or, if port 8000 is busy, on 8001 and so on.
+- `PORT` is an optional environment variable used to start the printer-app on a specified port. It must be between 1024 and 65535 and defaults to 8000. Assign a different port to each application; the launcher does not request automatic port selection.
 - **The container must be started in `--network host` mode** to allow the Printer-Application instance inside the container to access and discover printers available in the local network where the host system is in.
 - Alternatively using the internal network of the Docker instance (`-p <port>:8000` instead of `--network host -e PORT=<port>`) only gives access to local printers running on the host system itself.
 - `-v gutenprint-printer-app:/var/lib/gutenprint-printer-app` maps a volume for persistent storage.

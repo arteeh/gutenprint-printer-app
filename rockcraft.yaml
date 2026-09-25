@@ -714,6 +714,7 @@ parts:
     organize:
       start-server.sh: /scripts/start-server.sh
       run-avahi.sh: /scripts/run-avahi.sh
+      prepare-state.sh: /scripts/prepare-state.sh
     override-prime: |
       set -eux
       craftctl default

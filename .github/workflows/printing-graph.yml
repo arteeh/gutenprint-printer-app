@@ -1,0 +1,40 @@
+name: Source-pinned printing graph
+on:
+  pull_request:
+    branches: [testing]
+  push:
+    branches: [testing]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify sources, build and inspect native runtime
+        env:
+          ARCH: ${{ matrix.arch }}
+          BUILDER: registry.gitlab.com/freedesktop-sdk/infrastructure/freedesktop-sdk-docker-images/bst2:64eb0b4930d57a92710822898fb73af6cc1ae35d
+        run: |
+          docker run --rm --privileged --device /dev/fuse \
+            -e ARCH -v "$PWD:/src" -w /src "$BUILDER" bash -euxo pipefail -c '
+              tests/printing-graph.sh --sources
+              bst --no-interactive -o arch "$ARCH" source fetch --deps all printer-app/core-runtime.bst
+              bst --no-interactive -o arch "$ARCH" build printer-app/core-runtime.bst
+              bst --no-interactive -o arch "$ARCH" artifact checkout --directory .build-out printer-app/core-runtime.bst
+              tests/runtime-closure.sh .build-out
+            '

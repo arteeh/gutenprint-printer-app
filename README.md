@@ -1,5 +1,7 @@
 # Gutenprint Printer Application
 
+BuildStream/FSDK runtime: see [source ownership and native validation](docs/buildstream.md).
+
 ## INTRODUCTION
 
 This repository contains a Printer Application for printing with the

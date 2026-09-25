@@ -5,14 +5,30 @@ image="ghcr.io/projectbluefin/gutenprint-printer-app:build"
 name=gutenprint-printer-app-smoke
 failure_name=gutenprint-printer-app-child-failure
 invalid_name=gutenprint-printer-app-invalid-port
+symlink_name=gutenprint-printer-app-symlink-state
+ephemeral_name=gutenprint-printer-app-no-volume
 port="${PORT:-18050}"
 state_dir="$(mktemp -d)"
+symlink_dir="$(mktemp -d)"
 
 cleanup() {
-  podman rm -f "$name" "$failure_name" "$invalid_name" >/dev/null 2>&1 || true
-  podman unshare rm -rf "$state_dir"
+  podman rm -f "$name" "$failure_name" "$invalid_name" "$symlink_name" "$ephemeral_name" >/dev/null 2>&1 || true
+  podman unshare rm -rf "$state_dir" "$symlink_dir"
 }
 trap cleanup EXIT
+
+# Job spool, TLS keys and state must be owner-only, as must files the app
+# creates (its log), even on a volume that was created or left permissive.
+assert_private_state() {
+  local modes expected
+  modes="$(podman unshare stat -c '%a %n' "$state_dir" "$state_dir/spool" "$state_dir/cups/ssl" \
+    "$state_dir/gutenprint-printer-app.log")"
+  expected="700 $state_dir"$'\n'"700 $state_dir/spool"$'\n'"700 $state_dir/cups/ssl"$'\n'"600 $state_dir/gutenprint-printer-app.log"
+  if [[ "$modes" != "$expected" ]]; then
+    printf 'Persistent state is not owner-only:\n%s\n' "$modes" >&2
+    return 1
+  fi
+}
 
 wait_for_http() {
   local target_port="$1" response
@@ -64,15 +80,17 @@ podman run --rm --entrypoint /usr/bin/bash "$image" -c '
   [[ "$ppds" == *"Simplified"* ]]
 '
 
-chmod 0777 "$state_dir"
+# The documented rootless deployment: the volume belongs to the app's UID.
+podman unshare chown 65532:65532 "$state_dir"
 podman run -d \
   --name "$name" --network host -e PORT="$port" \
   -v "$state_dir:/var/lib/gutenprint-printer-app:Z" "$image" >/dev/null
 wait_for_http "$port"
 curl --fail --silent --show-error --insecure "https://127.0.0.1:${port}/" | grep -q '<title>Gutenprint Printer Application</title>'
-test -s "$state_dir/cups/snmp.conf"
-test -s "$state_dir/usb/net.sf.gimp-print.usb-quirks"
-test -s "$state_dir/usb/org.cups.usb-quirks"
+podman unshare test -s "$state_dir/cups/snmp.conf"
+podman unshare test -s "$state_dir/usb/net.sf.gimp-print.usb-quirks"
+podman unshare test -s "$state_dir/usb/org.cups.usb-quirks"
+assert_private_state
 podman exec "$name" /usr/bin/bash -c 'printf "%s\n" "# preserved SNMP settings" > /var/lib/gutenprint-printer-app/cups/snmp.conf'
 podman exec "$name" /usr/bin/bash -c 'printf "%s\n" "# preserved Gutenprint USB quirks" > /var/lib/gutenprint-printer-app/usb/net.sf.gimp-print.usb-quirks'
 podman exec "$name" /usr/bin/bash -c 'printf "%s\n" "# preserved CUPS USB quirks" > /var/lib/gutenprint-printer-app/usb/org.cups.usb-quirks'
@@ -80,10 +98,13 @@ podman stop --time 15 "$name" >/dev/null
 read -r running exit_status <<< "$(podman inspect "$name" --format '{{.State.Running}} {{.State.ExitCode}}')"
 [[ "$running" == false && "$exit_status" -eq 143 ]]
 
+# A restart repairs permissive directory modes without rewriting contents.
+podman unshare chmod 0777 "$state_dir" "$state_dir/spool" "$state_dir/cups/ssl"
 podman run -d \
   --name "$failure_name" --network host -e PORT="$port" \
   -v "$state_dir:/var/lib/gutenprint-printer-app:Z" "$image" >/dev/null
 wait_for_http "$port"
+assert_private_state
 podman exec "$failure_name" /usr/bin/bash -c 'test "$(< /var/lib/gutenprint-printer-app/cups/snmp.conf)" = "# preserved SNMP settings"'
 podman exec "$failure_name" /usr/bin/bash -c 'test "$(< /var/lib/gutenprint-printer-app/usb/net.sf.gimp-print.usb-quirks)" = "# preserved Gutenprint USB quirks"'
 podman exec "$failure_name" /usr/bin/bash -c 'test "$(< /var/lib/gutenprint-printer-app/usb/org.cups.usb-quirks)" = "# preserved CUPS USB quirks"'
@@ -104,10 +125,34 @@ done
 read -r running failure_status <<< "$(podman inspect "$failure_name" --format '{{.State.Running}} {{.State.ExitCode}}')"
 [[ "$running" == false && "$failure_status" -ne 0 ]]
 
+# Without a volume the image's own (root-owned) state directory is used: the
+# app must still own writable, private ppd, spool and TLS directories.
+podman run -d --name "$ephemeral_name" --network host -e PORT="$port" "$image" >/dev/null
+wait_for_http "$port"
+podman exec "$ephemeral_name" /usr/bin/bash -c '
+  for dir in /var/lib/gutenprint-printer-app/{ppd,spool,cups/ssl}; do
+    [[ -O "$dir" && -w "$dir" && "$(stat -c %a "$dir")" == 700 ]] || { printf "%s is not private and writable\n" "$dir" >&2; exit 1; }
+  done
+'
+podman rm -f "$ephemeral_name" >/dev/null
+
 set +e
 podman run --name "$invalid_name" -e PORT=invalid "$image" >/dev/null 2>&1
 invalid_status=$?
 set -e
 [[ "$invalid_status" -eq 64 ]]
 podman logs "$invalid_name" 2>&1 | grep -q 'PORT must be numeric'
-printf 'OK: native nonroot Gutenprint payload, HTTPS, persistent state and supervised lifecycle\n'
+
+# A private directory that is a symlink stops startup; its target is untouched.
+mkdir -m 0755 "$symlink_dir/outside"
+ln -s /var/lib/gutenprint-printer-app/outside "$symlink_dir/spool"
+podman unshare chown -h 65532:65532 "$symlink_dir" "$symlink_dir/outside" "$symlink_dir/spool"
+set +e
+podman run --name "$symlink_name" -e PORT="$port" \
+  -v "$symlink_dir:/var/lib/gutenprint-printer-app:Z" "$image" >/dev/null 2>&1
+symlink_status=$?
+set -e
+[[ "$symlink_status" -eq 1 ]]
+podman logs "$symlink_name" 2>&1 | grep -q 'spool must not be a symlink'
+[[ "$(podman unshare stat -c %a "$symlink_dir/outside")" == 755 ]]
+printf 'OK: native nonroot Gutenprint payload, HTTPS, owner-only persistent state and supervised lifecycle\n'

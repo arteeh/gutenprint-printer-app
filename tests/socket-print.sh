@@ -87,7 +87,7 @@ for _ in $(seq 1 120); do
 done
 if [[ ! -s "$output_file" ]]; then
   podman logs "$name" >&2
-  cat "$state_dir/gutenprint-printer-app.log" >&2 || true
+  podman unshare cat "$state_dir/gutenprint-printer-app.log" >&2 || true
   exit 1
 fi
 wait "$sink_pid"

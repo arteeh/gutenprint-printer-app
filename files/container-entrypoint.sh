@@ -7,7 +7,25 @@ if [[ -n "${PORT:-}" && ! "$PORT" =~ ^[0-9]+$ ]]; then
 fi
 
 state_dir=/var/lib/gutenprint-printer-app
-mkdir -p "$state_dir/ppd" "$state_dir/spool" "$state_dir/usb" "$state_dir/cups/ssl" /run/dbus /run/avahi-daemon /run/gutenprint-printer-app
+# Print jobs, TLS keys and printer state are owner-only: new files inherit
+# umask 077, and the directory modes are reapplied on every start because a
+# mounted volume hides the image's. Never follow a symlink out of the volume.
+umask 077
+private_dirs=("$state_dir/spool" "$state_dir/cups/ssl")
+for dir in "$state_dir" "$state_dir/cups" "${private_dirs[@]}"; do
+  if [[ -L "$dir" ]]; then
+    printf '%s must not be a symlink\n' "$dir" >&2
+    exit 1
+  fi
+done
+mkdir -p "$state_dir/ppd" "$state_dir/usb" "${private_dirs[@]}" /run/dbus /run/avahi-daemon /run/gutenprint-printer-app
+chmod 0700 "${private_dirs[@]}"
+# The image's own state directory is root-owned 0777 (BuildStream artifacts
+# carry no ownership), and a volume root may belong to the operator: secure
+# it only when this user owns it, as with `podman unshare chown 65532:65532`.
+if [[ -O "$state_dir" ]]; then
+  chmod 0700 "$state_dir"
+fi
 if [[ ! -e "$state_dir/cups/snmp.conf" && ! -L "$state_dir/cups/snmp.conf" ]]; then
   cp /etc/cups/snmp.conf "$state_dir/cups/snmp.conf"
 fi

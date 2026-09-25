@@ -304,6 +304,17 @@ port and state directory. Admins should assign each physical printer to
 one application only: the same USB device must not be presented to multiple
 instances, and manually configured DNS-SD advertisements must be unique.
 
+The state is private to the app's user. On every start the entrypoint
+applies `umask 077`, so the state file, log, spooled jobs and TLS keys are
+created `0600`. It also resets the `spool` and `cups/ssl` directories to
+`0700`, along with the state directory itself when UID 65532 owns it, as in
+the `podman unshare chown` step above. A volume hides the image's directory
+modes, which is why they are reapplied. Existing file contents and modes are
+not changed, and nothing is migrated. Startup fails if a private directory
+cannot be created or secured, or if the state directory, `cups`, `spool` or
+`cups/ssl` is a symlink.
+Read the volume from the host with `podman unshare`.
+
 For real USB devices, add `--device /dev/bus/usb --group-add keep-groups`
 to the rootless Podman command. The host user must already have permission
 to open the intended USB device through udev and device groups; do not use

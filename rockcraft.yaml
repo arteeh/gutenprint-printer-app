@@ -678,25 +678,25 @@ parts:
       CUPS_SERVERROOT="$CRAFT_PRIME/etc/cups/ssl"
       mkdir -p "$CUPS_SERVERROOT"
       chown 584792:584792 "$CUPS_SERVERROOT"
-      chmod 770 "$CUPS_SERVERROOT"
+      chmod 700 "$CUPS_SERVERROOT"
 
       # Set up the state directory and file for the printer app
       STATE_DIR="$CRAFT_PRIME/var/lib/gutenprint-printer-app"
       mkdir -p "$STATE_DIR"
       chown 584792:584792 "$STATE_DIR"
-      chmod 770 "$STATE_DIR"
+      chmod 700 "$STATE_DIR"
 
       # Create a state file inside the state directory
       STATE_FILE="$STATE_DIR/gutenprint-printer-app.state"
       touch "$STATE_FILE"
       chown 584792:584792 "$STATE_FILE"
-      chmod 644 "$STATE_FILE"
+      chmod 600 "$STATE_FILE"
 
       # Ensure the spool directory is owned properly
       SPOOL_DIR="$CRAFT_PRIME/var/spool/gutenprint-printer-app"
       mkdir -p "$SPOOL_DIR"
       chown 584792:584792 "$SPOOL_DIR"
-      chmod 770 "$SPOOL_DIR"
+      chmod 700 "$SPOOL_DIR"
 
       # Create and set permissions for the application log file
       touch $CRAFT_PRIME/gutenprint-printer-app.log
@@ -713,6 +713,7 @@ parts:
     source: scripts/
     organize:
       start-server.sh: /scripts/start-server.sh
+      private-state.sh: /scripts/private-state.sh
       run-avahi.sh: /scripts/run-avahi.sh
     override-prime: |
       set -eux

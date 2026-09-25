@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eux
 
+# Enforce privacy again when mounted volumes hide image directory modes.
+# shellcheck source=scripts/private-state.sh
+. "$(dirname "$0")/private-state.sh"
+
 # Precheck: Ensure PORT is a number or undefined
 if [ -n "${PORT:-}" ]; then
     if ! echo "$PORT" | grep -Eq '^[0-9]+$'; then

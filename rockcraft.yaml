@@ -18,18 +18,13 @@ platforms:
 run-user: _daemon_
 
 services:
-  avahi-daemon:
-    command: /scripts/run-avahi.sh
-    override: replace
-    on-failure: restart
-    startup: enabled
-
   gutenprint-printer-app:
-    command: /scripts/start-server.sh
+    command: /usr/bin/python3 /scripts/supervise.py
     override: replace
     on-failure: shutdown
     startup: enabled
-    after: [avahi-daemon]
+    # Allow the supervisor to stop all three children before Pebble kills it.
+    kill-delay: 20s
 
 parts:
   pappl:
@@ -714,6 +709,7 @@ parts:
     organize:
       start-server.sh: /scripts/start-server.sh
       run-avahi.sh: /scripts/run-avahi.sh
+      supervise.py: /scripts/supervise.py
     override-prime: |
       set -eux
       craftctl default

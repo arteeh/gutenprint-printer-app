@@ -31,10 +31,8 @@ config:
       rm -f /layer/usr/bin/cupsd /layer/usr/bin/ippeveprinter
       chmod 0777 /layer/run
       install -d -m 1777 /layer/tmp
-      install -d -m 0777 \
-        /layer/var/lib/gutenprint-printer-app \
-        /layer/var/lib/gutenprint-printer-app/ppd \
-        /layer/var/lib/gutenprint-printer-app/spool
+      # The entrypoint creates the owner-only state subdirectories as 65532.
+      install -d -m 0777 /layer/var/lib/gutenprint-printer-app
       if [ -f /layer/usr/share/dbus-1/system.conf ]; then
         sed -i '/<user>messagebus<\/user>/d; s/<policy user="root">/<policy user="nonroot">/g' /layer/usr/share/dbus-1/system.conf
       fi

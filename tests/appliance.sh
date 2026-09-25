@@ -6,12 +6,13 @@ name=gutenprint-printer-app-smoke
 failure_name=gutenprint-printer-app-child-failure
 invalid_name=gutenprint-printer-app-invalid-port
 symlink_name=gutenprint-printer-app-symlink-state
+ephemeral_name=gutenprint-printer-app-no-volume
 port="${PORT:-18050}"
 state_dir="$(mktemp -d)"
 symlink_dir="$(mktemp -d)"
 
 cleanup() {
-  podman rm -f "$name" "$failure_name" "$invalid_name" "$symlink_name" >/dev/null 2>&1 || true
+  podman rm -f "$name" "$failure_name" "$invalid_name" "$symlink_name" "$ephemeral_name" >/dev/null 2>&1 || true
   podman unshare rm -rf "$state_dir" "$symlink_dir"
 }
 trap cleanup EXIT
@@ -123,6 +124,17 @@ for _ in $(seq 1 150); do
 done
 read -r running failure_status <<< "$(podman inspect "$failure_name" --format '{{.State.Running}} {{.State.ExitCode}}')"
 [[ "$running" == false && "$failure_status" -ne 0 ]]
+
+# Without a volume the image's own (root-owned) state directory is used: the
+# app must still own writable, private ppd, spool and TLS directories.
+podman run -d --name "$ephemeral_name" --network host -e PORT="$port" "$image" >/dev/null
+wait_for_http "$port"
+podman exec "$ephemeral_name" /usr/bin/bash -c '
+  for dir in /var/lib/gutenprint-printer-app/{ppd,spool,cups/ssl}; do
+    [[ -O "$dir" && -w "$dir" && "$(stat -c %a "$dir")" == 700 ]] || { printf "%s is not private and writable\n" "$dir" >&2; exit 1; }
+  done
+'
+podman rm -f "$ephemeral_name" >/dev/null
 
 set +e
 podman run --name "$invalid_name" -e PORT=invalid "$image" >/dev/null 2>&1

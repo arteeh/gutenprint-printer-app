@@ -31,7 +31,9 @@ config:
       rm -f /layer/usr/bin/cupsd /layer/usr/bin/ippeveprinter
       chmod 0777 /layer/run
       install -d -m 1777 /layer/tmp
-      # The entrypoint creates the owner-only state subdirectories as 65532.
+      # The entrypoint creates the owner-only state subdirectories as 65532,
+      # so ship the state directory empty (make install creates ppd/ in it).
+      rm -rf /layer/var/lib/gutenprint-printer-app
       install -d -m 0777 /layer/var/lib/gutenprint-printer-app
       if [ -f /layer/usr/share/dbus-1/system.conf ]; then
         sed -i '/<user>messagebus<\/user>/d; s/<policy user="root">/<policy user="nonroot">/g' /layer/usr/share/dbus-1/system.conf

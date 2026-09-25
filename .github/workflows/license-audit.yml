@@ -1,0 +1,23 @@
+name: License audit tooling
+
+on:
+  pull_request:
+    branches: [testing]
+    paths:
+      - scripts/audit-oci-licenses.py
+      - tests/test_license_audit.py
+      - .github/workflows/license-audit.yml
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p 'test_license_audit.py'

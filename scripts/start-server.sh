@@ -20,5 +20,8 @@ while true; do
     sleep 1
 done
 
+# Seed user-editable USB defaults before starting the backend.
+. /scripts/seed-usb-quirks.sh
+
 # Start the gutenprint-printer-app server
 gutenprint-printer-app -o log-file="/gutenprint-printer-app.log" ${PORT:+-o server-port="$PORT"} server

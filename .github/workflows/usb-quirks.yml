@@ -1,0 +1,15 @@
+name: USB quirk state
+on:
+  pull_request:
+    branches: [testing]
+  push:
+    branches: [testing]
+permissions:
+  contents: read
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - run: python3 -m unittest discover -s tests -v
+      - run: shellcheck scripts/seed-usb-quirks.sh scripts/start-server.sh

@@ -427,6 +427,21 @@ there is also generic support.
 USB Quirk rules in `/usr/share/cups/usb` and the `/etc/cups/snmp.conf`
 file can get edited if needed.
 
+The Rockcraft OCI launcher seeds `org.cups.usb-quirks` and
+`net.sf.gimp-print.usb-quirks`, when present in the image, into
+`/var/lib/gutenprint-printer-app/usb/`. Mount the parent state directory as
+writable persistent storage to retain edits across container replacement.
+`USB_QUIRK_DIR` points to that parent: the patched CUPS backend appends `usb/`.
+Startup preserves existing tables, including empty files and symlinks; to
+restore an image default, remove that table from the volume and restart.
+The seeder accepts defaults from `/usr/share/cups/usb/` and the relocated
+`/usr/lib/gutenprint-printer-app/backend/` directory used by Rockcraft.
+
+Run `python3 -m unittest discover -s tests -v` to verify fresh seeding and
+restart preservation. These filesystem tests do not verify OCI printing or
+physical USB output; full image IPP-to-socket-sink validation is still required
+for the FSDK migration.
+
 Make sure you have Gutenprint and CUPS (at least its backends)
 installed.
 

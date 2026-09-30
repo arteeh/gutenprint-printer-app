@@ -256,8 +256,10 @@ just verify
 `just verify` builds the OCI image, checks the nonroot HTTP/HTTPS appliance,
 and prints a real IPP test page through the Gutenprint ESC/P2 raster filter
 and CUPS socket backend into a byte-capturing sink. No local printer is
-required. It also checks that the configured queue survives restart, and
-that two instances coexist on one host (`tests/coexistence.sh`, below).
+required. It also checks that the configured queue survives restart, that
+two instances coexist on one host (`tests/coexistence.sh`, below), and that
+the image ships none of Avahi's sample remote-login records
+(`just check-no-remote-login-records`, below).
 The local image is tagged `ghcr.io/projectbluefin/gutenprint-printer-app:build`
 for testing only. CI on pull requests only validates the BuildStream graph
 (`just validate`). The merge queue and manual `workflow_dispatch` runs build
@@ -341,6 +343,25 @@ renames the later advertisement with a suffix such as `name (9479AE)`; the
 test fails on that, so give every queue a unique name rather than relying on
 the rename. Run it against another build with
 `IMAGE=<ref> PORT=<base-port> tests/coexistence.sh`.
+
+This appliance serves neither SSH nor SFTP, so advertising `_ssh._tcp` or
+`_sftp-ssh._tcp` under the host's name would misdirect LAN users. The image
+therefore ships none of Avahi's sample remote-login records:
+`just check-no-remote-login-records` (run by `just verify`) asserts the built
+image carries no `/etc/avahi/services/{ssh,sftp-ssh}.service`. It needs only
+Podman, so a reintroduction fails `just verify` without host networking.
+
+`just verify-service-advertisements` is the host-network counterpart. On an
+otherwise quiet test LAN it browses the real records before and after
+starting two instances and restarting one of them with distinct names, ports and state
+volumes, proving neither adds a remote-login record while each instance's own
+IPP queue still resolves on its distinct port. It needs host Avahi and
+`avahi-browse`, so it is an operator-run recipe rather than part of
+`just verify`, and it claims nothing about physical discovery or printed
+paper. `tests/service-advertisements.sh` accepts `IMAGE=<ref>` to observe
+another build, `PORT=<base-port>` to move the two instances off the default
+`18546`/`18547`, and `EVIDENCE_DIR=<dir>` to keep the browsed records,
+container logs and image metadata instead of a temporary directory.
 
 The state is private to the app's user. On every start the entrypoint
 applies `umask 077`, so the state file, log, spooled jobs and TLS keys are

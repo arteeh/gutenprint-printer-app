@@ -27,6 +27,10 @@ config:
         'nonroot:x:65532:' \
         >> /layer/etc/group
       rm -rf /layer/run/dbus /layer/run/avahi-daemon /layer/run/gutenprint-printer-app
+      # Avahi's sample remote-login records do not describe this appliance.
+      # Keep the shared base's avahi-printing element and PAPPL's dynamic IPP publication.
+      rm -f /layer/etc/avahi/services/ssh.service \
+        /layer/etc/avahi/services/sftp-ssh.service
       rm -rf /layer/usr/lib/debug /layer/usr/share/cups/ipptool
       # pappl-retrofit's own A4 sample test page; the app prints
       # /usr/share/gutenprint-printer-app/testpage.pdf built from testpage.ps.

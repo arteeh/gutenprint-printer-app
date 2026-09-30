@@ -57,7 +57,13 @@ export:
     rm -rf .build-out
     podman tag "$image_id" "{{ image_ref }}"
 
+# Host-only: the entrypoint must reject malformed web-administration settings
+# before it touches the image or persistent state.
+verify-entrypoint-validation:
+    tests/entrypoint-validation.sh
+
 verify:
+    tests/entrypoint-validation.sh
     just build
     tests/image-metadata.sh
     tests/no-devel.sh
